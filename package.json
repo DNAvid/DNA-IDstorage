@@ -1,0 +1,23 @@
+{
+  "name": "dna-id-storage",
+  "version": "1.0.0",
+  "description": "",
+  "main": "storageServer.js",
+  "dependencies": {
+    "express-formidable": "^1.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DNAvid/DNA-IDstorage.git"
+  },
+  "author": "David Weiss",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DNAvid/DNA-IDstorage/issues"
+  },
+  "homepage": "https://github.com/DNAvid/DNA-IDstorage#readme"
+}
