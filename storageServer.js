@@ -1,6 +1,7 @@
 const express = require('express');
 const formidable = require('formidable');
 var fs = require('fs');
+// key not synched on git
 var key = fs.readFileSync('./selfCert.key');
 var cert = fs.readFileSync('./selfCert.crt')
 var https = require('https');
