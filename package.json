@@ -4,14 +4,19 @@
   "description": "",
   "main": "storageServer.js",
   "dependencies": {
+    "async": "^2.5.0",
+    "crypto": "^1.0.1",
     "express": "^4.15.4",
     "express-formidable": "^1.0.0",
-    "fs": "0.0.1-security"
+    "fs": "0.0.1-security",
+    "ipfs": "^0.25.4",
+    "leveldown": "^1.7.2",
+    "zlib": "^1.0.5"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "sudo node storageServer.js" 
+    "start": "sudo node storageServer.js"
   },
   "repository": {
     "type": "git",
