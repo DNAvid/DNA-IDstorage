@@ -12,3 +12,5 @@ out: ipfs url
 - download
 in: password + ipfs url
 out: unencrypted file
+
+* You need your own certificates for https.
