@@ -23,41 +23,6 @@ var HOST = '0.0.0.0';
 var privateKey = new Buffer('my secret');
 var aes = crypto.createCipher('aes-256-cbc', privateKey);
 
-// Upload to IPFS
-// Create the File to add, a file consists of a path + content. More details on
-// https://github.com/ipfs/interface-ipfs-core/tree/master/API/files
-
-
-function uploadToIPFS(path='hello.txt', content=Buffer.from('Hello World 101')) {
-        // asynchronous server startup and upload
-        const ipfsNode = new IPFS()
-        let fileMultihash
-        (
-                series(
-                        [
-                                // 1. load ipfs server
-                                (cb) => ipfsNode.on('ready', cb),
-
-                                // 2. After loading ipfs 
-                                (cb) => ipfsNode.files.add({
-                                        path: path,
-                                        content: content
-                                }, 
-                                        // When file loaded
-                                        (err, result) => {
-                                                if (err) { return cb(err) }
-                                                console.log('\nAdded file:', result[0].path, result[0].hash)
-                                                fileMultihash = result[0].hash
-                                                // Wait for completion
-                                                cb()
-                                        }
-                                )
-                        ]
-                )
-        )
-        return
-}
-
 https.createServer(https_options, function (req, res) {
         if (req.url == '/fileupload' && req.method == 'POST') {
                 var form = new formidable.IncomingForm();
@@ -71,11 +36,46 @@ https.createServer(https_options, function (req, res) {
                                 if (err) throw err;
                         });
 
-                        // Encrypt and upload to ipfs
+                        // create read stream to encrypt and send to ipfs
                         var rstream = fs.createReadStream(newpath);
-                        uploadToIPFS('confidential.encr', rstream.pipe(aes))
-                })
+                        
+                        // Upload to IPFS
+                        // Create the File to add, a file consists of a path + content. More details on
+                        // https://github.com/ipfs/interface-ipfs-core/tree/master/API/files
+                        // asynchronous server startup and upload
 
+                        const ipfsNode = new IPFS()
+                        console.log('New IPFS node spawned!')
+                        let fileMultihash
+                        series(
+                                [
+                                        // 1. load ipfs server
+                                        (cb) => ipfsNode.on('ready', cb),
+
+                                        // 2. After loading ipfs 
+                                        (cb) => ipfsNode.files.add({
+                                                path: 'private_data_if_no_permission_destroy.encr',
+                                                content: rstream.pipe(aes)
+                                        }, 
+                                                // When file loaded
+                                                (err, result) => {
+                                                        if (err) { return cb(err) }
+                                                        console.log('\nAdded file:', result[0].path, result[0].hash)
+                                                        fileMultihash = result[0].hash
+                                                        var b =
+                                                        '<h1> Your information is now encrypted in the interplanetary file system</h1>'
+                                                        +'<h2>Your data is immortalized, and encrypted <a href="https://ipfs.io/ipfs/'+ fileMultihash +'">here</a>. This is the Multi hash of your file:'+fileMultihash+'</h2>'
+                                                        +'<h2> Only you have its password. If shared with this location, it gives access to your data. Share wisely.</h2>';
+                                                       
+                                                        res.write(b)
+                                                        cb()
+                                                        res.end()
+                                                }
+                                        )
+                                ]
+                        )
+                }
+                )
         }
         else {
                 // Upload form

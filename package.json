@@ -11,6 +11,7 @@
     "fs": "0.0.1-security",
     "ipfs": "^0.25.4",
     "leveldown": "^1.7.2",
+    "npm": "^5.4.2",
     "zlib": "^1.0.5"
   },
   "devDependencies": {},
