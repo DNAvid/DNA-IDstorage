@@ -3,13 +3,13 @@ var formidable = require('formidable');
 var fs = require('fs');
 // key not synched on git
 var key = fs.readFileSync('./selfCert.key');
-var cert = fs.readFileSync('./selfCert.crt')
+var cert = fs.readFileSync('./selfCert.crt');
 var https = require('https');
 var http = require('http');
 var fs = require('fs')
 var crypto = require('crypto');
-var series = require('async/series')  
-var IPFS = require('ipfs')
+var series = require('async/series') ; 
+var IPFS = require('ipfs');
 
 var https_options = {
         key: key,
@@ -23,12 +23,18 @@ var HOST = '0.0.0.0';
 var privateKey = new Buffer('my secret');
 var aes = crypto.createCipher('aes-256-cbc', privateKey);
 
+
 https.createServer(https_options, function (req, res) {
         if (req.url == '/fileupload' && req.method == 'POST') {
                 var form = new formidable.IncomingForm();
 
                 // form parsing
                 form.parse(req, function (err, fields, files) {
+                       if(typeof(ipfsNode)==='undefined'){console.log('IPFS is undefined.')}else{console.log('IPFS is defined.')}
+                        var ipfsNode = new IPFS()
+
+                        console.log('New IPFS node spawned!')
+                        console.log('\nNode info on property isOnline:', ipfsNode.isOnline() )
                         // Move to upload directory
                         var oldpath = files.filetoupload.path;
                         var newpath = '/home/davidweisss/DNA-IDstorage/uploads/' + files.filetoupload.name;
@@ -43,15 +49,12 @@ https.createServer(https_options, function (req, res) {
                         // Create the File to add, a file consists of a path + content. More details on
                         // https://github.com/ipfs/interface-ipfs-core/tree/master/API/files
                         // asynchronous server startup and upload
-
-                        const ipfsNode = new IPFS()
-                        console.log('New IPFS node spawned!')
                         let fileMultihash
+
                         series(
                                 [
                                         // 1. load ipfs server
-                                        (cb) => ipfsNode.on('ready', cb),
-
+                                        (cb) => ipfsNode.on('ready', (cb)),
                                         // 2. After loading ipfs 
                                         (cb) => ipfsNode.files.add({
                                                 path: 'private_data_if_no_permission_destroy.encr',
@@ -68,11 +71,38 @@ https.createServer(https_options, function (req, res) {
                                                         +'<h2> Only you have its password. If shared with this location, it gives access to your data. Share wisely.</h2>';
                                                        
                                                         res.write(b)
+                                                        // IPFS Core exposed components
+                                                        //     //   - for booting up a node
+                                                        //console.log('\nNode info on property init:', ipfsNode.init() )
+                                                        //console.log('\nNode info on property preStart:', ipfsNode.preStart() )
+                                                        //console.log('\nNode info on property start:', ipfsNode.start() )
+                                                        //console.log('\nNode info on property stop:', ipfsNode.stop() )
+                                                        console.log('Node info on property isOnline:', ipfsNode.isOnline() )
+                                                        //   - interface-ipfs-core defined API
+                                                        console.log('\nNode info on property version:', ipfsNode.version() )
+                                                        console.log('\nNode info on property id:', ipfsNode.id() )
+                                                        // console.log('\nNode info on property repo:', ipfsNode.repo )
+                                                        // console.log('\nNode info on property bootstrap:', ipfsNode.bootstrap)
+                                                        // console.log('\nNode info on property config:', ipfsNode.config )
+                                                        // console.log('\nNode info on property block:', ipfsNode.block )
+                                                        // console.log('\nNode info on property object:', ipfsNode.object )
+                                                        // console.log('\nNode info on property dag:', ipfsNode.dag )
+                                                        // console.log('\nNode info on property libp2p:', ipfsNode.libp2p )
+                                                        // console.log('\nNode info on property swarm:', ipfsNode.swarm )
+                                                        // console.log('\nNode info on property files:', ipfsNode.files )
+                                                        // console.log('\nNode info on property bitswap:', ipfsNode.bitswap )
+                                                        // console.log('\nNode info on property ping:', ipfsNode.ping)
+                                                        // console.log('\nNode info on property pubsub:', ipfsNode.pubsub )
+                                                        // console.log('\nNode info on property dht:', ipfsNode.dht )
+
                                                         cb()
-                                                        res.end()
                                                 }
                                         )
                                 ]
+                                ,
+                                () => {
+                                        if(typeof(ipfsNode)==='undefined'){console.log('In callback: IPFS is undefined.')}else{console.log('In callback: IPFS is defined.')}
+                                        return res.end()}
                         )
                 }
                 )
