@@ -20,7 +20,6 @@ var PORT = 443;
 var HOST = '0.0.0.0';
 
 // Nodejs encryption of buffers
-var privateKey = new Buffer('my secret');
 
 var ipfsNode = new IPFS()
 
@@ -30,7 +29,6 @@ ipfsNode.on('ready', (err) => {
                 process.exit(1)
         }
 
-
         var server =  https.createServer(https_options, function (req, res) {
                 if (req.url == '/fileupload' && req.method == 'POST') {
                         var form = new formidable.IncomingForm();
@@ -38,6 +36,9 @@ ipfsNode.on('ready', (err) => {
                         // form parsing
                         form.parse(req, function (err, fields, files) {
 
+                                console.log('\nFileds=\n ',fields)
+
+                                var privateKey = new Buffer(fields.secret);
                                 // create read stream to encrypt and send to ipfs
                                 var rstream = fs
                                         .createReadStream(files.filetoupload.path)
@@ -59,27 +60,66 @@ ipfsNode.on('ready', (err) => {
                                                 if (err) { return cb(err) }
                                                 console.log('\nAdded file:', result[0].path, result[0].hash)
                                                 fileMultihash = result[0].hash
+                                                let fossilURL = 'https://ipfs.io/ipfs/' + result[0].hash
+                                                res.writeHead(200, {'Content-Type': 'text/html'});
                                                 res.write(
-                                                        '<h1> Your information is now encrypted in the interplanetary file system</h1>' +
-                                                                '<h2>Your data is immortalized, and encrypted <a href="https://ipfs.io/ipfs/' + result[0].hash + '">here</a>. This is the Multi hash of your file:' + fileMultihash + '</h2>' +
-                                                                '<h2> Only you have its password. If shared with this location, it gives access to your data. Share wisely.</h2>',
-                                                        res.end.bind(res))
+                                                        '<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>' +
+                                                                '<a href="'+fossilURL+ '">'+fossilURL+'</a><br>'+
+                                                                'The only way to read it is with the secret you provided, it is posted here for the last time, then it will be erased forever:<br>'+fields.secret+'<br>If shared with this location, it gives access to your data. Share wisely.<br>'
+                                                                +'<a href="https://dnacoinstorage.com/">Recover files here, or upload more.</a>'
+                                                        ,res.end.bind(res)
+                                                )
                                         }
                                 )
                         })
-                }else {
+                }
+                else if (req.url == '/filedownload' && req.method == 'POST') {
+
+                        var form = new formidable.IncomingForm();
+
+                        // form parsing
+                        form.parse(req, function (err,fields){
+                                let fileMultihash = fields.fileMultihash
+                                ipfsNode.files.cat(fileMultihash,
+                                        (err, stream) => {
+                                                if (err) { return cb(err) }
+                                                var decrypt = crypto.createDecipher('aes-256-cbc', new Buffer(fields.secret))
+                                                stream.pipe(decrypt).pipe(res) 
+                                                stream.on('close', () => {
+                                                res.write('<h1>Downloaded...</h1>',
+                                                        res.end.bind(res)
+                                               );
+                                                        
+                                                        
+                                                        
+                                                })
+                                        }
+                                )
+                        })
+                }
+
+                else if (req.url == '/' && req.method == 'GET'){
                         // Upload form
                         res.writeHead(200, {'Content-Type': 'text/html'});
-                        res.write('<h1> Store and send encrypted content to anyone</h1>');
-                        res.write('<h2>Encrypt and store in always-available, non-erasable peer-to-peer storage <br> Access and share with keys on www.</h2>');
+                        res.write('<h1> Securely store files</h1>');
                         res.write('<form action="fileupload" method="post" enctype="multipart/form-data">');
+                        res.write('Secret:<br> <input type="text" name="secret"><br>');
                         res.write('<input type="file" name="filetoupload"><br>');
                         res.write('<input type="submit">');
                         res.write('</form>');
-                        res.write('<p>secure https server encrypting your info then uploading it to permanent peer to peer storage network (ipfs). <br> </br> Gives you a web adress (ipfs) and a password to decrypt your data</p>');
-                        res.write('<p>Only you, and whomever you share the key with, has access</p>');
+                        res.write('<h1> Recover files</h1>');
+                        res.write('<h2>Enter ipfs multihash and secret</h2>');
+                        res.write('<form action="/filedownload" method="post">');
+                        res.write('IPFS file multihash:<br> <input type="text" name="fileMultihash"><br>');
+                        res.write('Secret:<br> <input type="text" name="secret"><br>');
+                        res.write('<input type="submit" >')
+                        res.write('</form>');
                         res.write('<p>* this service is used by https://dnavid.com through its API to upload personal DNA information while retaining control. <p>');
                         return res.end();
+                } else{
+
+                        res.writeHead(404, {'Content-Type': 'text/html'});
+                        return res.end('The page does not exist.')
                 }
         }).on('listening', (err) => {
                 if (err) {
