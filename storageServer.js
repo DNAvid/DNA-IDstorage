@@ -60,13 +60,14 @@ ipfsNode.on('ready', (err) => {
                                                 if (err) { return cb(err) }
                                                 console.log('\nAdded file:', result[0].path, result[0].hash)
                                                 fileMultihash = result[0].hash
-                                                let fossilURL = 'https://ipfs.io/ipfs/' + result[0].hash
+                                                let ipfsURL = 'https://ipfs.io/ipfs/' + fileMultihash 
                                                 res.writeHead(200, {'Content-Type': 'text/html'});
-                                                res.write(
-                                                        '<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>' +
-                                                                '<a href="'+fossilURL+ '">'+fossilURL+'</a><br>'+
-                                                                'The only way to read it is with the secret you provided, it is posted here for the last time, then it will be erased forever:<br>'+fields.secret+'<br>If shared with this location, it gives access to your data. Share wisely.<br>'
-                                                                +'<a href="https://dnacoinstorage.com/">Recover files here, or upload more.</a>'
+                                                res.write('<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>')
+                                                res.write('The only way to read it from now on is to have the ipfs link:')
+                                                res.write('<br><a href="'+ipfsURL+ '">'+ipfsURL+'</a><br>')
+                                                res.write('<br>...and the secret you provided, it is posted here for the last time, then it will be erased forever:<br>'+fields.secret)
+                                                res.write('<br><br>the fileMultihash is (unique ID in ipfs URL above):<br>'+fileMultihash+'<br>')
+                                                res.write('<a href="https://dnacoinstorage.com/">Recover files here, or upload more.</a>'
                                                         ,res.end.bind(res)
                                                 )
                                         }
@@ -89,9 +90,6 @@ ipfsNode.on('ready', (err) => {
                                                 res.write('<h1>Downloaded...</h1>',
                                                         res.end.bind(res)
                                                );
-                                                        
-                                                        
-                                                        
                                                 })
                                         }
                                 )
@@ -102,19 +100,22 @@ ipfsNode.on('ready', (err) => {
                         // Upload form
                         res.writeHead(200, {'Content-Type': 'text/html'});
                         res.write('<h1> Securely store files</h1>');
+                        res.write('<p> Encrypts and uploads your file into a permanent peer-to-peer public storage. Locks your file with a secret so no one else can see your info.</p>');
                         res.write('<form action="fileupload" method="post" enctype="multipart/form-data">');
-                        res.write('Secret:<br> <input type="text" name="secret"><br>');
-                        res.write('<input type="file" name="filetoupload"><br>');
-                        res.write('<input type="submit">');
+                        res.write('Secret<br> <input type="text" name="secret"><br>');
+                        res.write('File<br> <input type="file" name="filetoupload"><br>');
+                        res.write('<br><input type="submit">');
                         res.write('</form>');
                         res.write('<h1> Recover files</h1>');
-                        res.write('<h2>Enter ipfs multihash and secret</h2>');
+                        res.write('Enter ipfs multihash and secret to retrieve previously stored information.<br>');
                         res.write('<form action="/filedownload" method="post">');
-                        res.write('IPFS file multihash:<br> <input type="text" name="fileMultihash"><br>');
-                        res.write('Secret:<br> <input type="text" name="secret"><br>');
-                        res.write('<input type="submit" >')
+                        res.write('<br>IPFS file multihash<br> <input type="text" name="fileMultihash"><br>');
+                        res.write('Secret<br> <input type="text" name="secret"><br>');
+                        res.write('<br><input type="submit" >')
                         res.write('</form>');
-                        res.write('<p>* this service is used by https://dnavid.com through its API to upload personal DNA information while retaining control. <p>');
+                        res.write('<p>* this service is used by <a href="https://dnavid.com" target="_blank">DNA ID</a> to upload personal DNA information safely, while retaining ownership and control. Contact on Twitter: <a href="https://twitter.com/davidweisss" target="_blank">@davidweisss</a><p>');
+                        res.write('<h1>How it works</h1>');
+      res.write('<iframe width="560" height="315" src="https://www.youtube.com/embed/KJKNyoJBD4U?rel=0" frameborder="0" allowfullscreen></iframe>')
                         return res.end();
                 } else{
 
