@@ -1,4 +1,3 @@
-var express = require('express');
 var formidable = require('formidable');
 var fs = require('fs');
 // key not synched on git
@@ -8,9 +7,8 @@ var https = require('https');
 var http = require('http');
 var fs = require('fs')
 var crypto = require('crypto');
-var series = require('async/series') ; 
 var IPFS = require('ipfs');
-
+var url = require('url')
 var https_options = {
         key: key,
         cert: cert
@@ -30,13 +28,16 @@ ipfsNode.on('ready', (err) => {
         }
 
         var server =  https.createServer(https_options, function (req, res) {
-                if (req.url == '/fileupload' && req.method == 'POST') {
+                if (req.url == '/fileUpload' && req.method == 'POST') {
                         var form = new formidable.IncomingForm();
 
                         // form parsing
                         form.parse(req, function (err, fields, files) {
 
-                                console.log('\nFileds=\n ',fields)
+                                console.log('\nFields=\n ',fields)
+                                console.log('\nFiles=\n ',files)
+
+                                //if (typeof(files.filetoupload)==="undefined"){res.end("Error: no file selected.")}
 
                                 var privateKey = new Buffer(fields.secret);
                                 // create read stream to encrypt and send to ipfs
@@ -61,6 +62,8 @@ ipfsNode.on('ready', (err) => {
                                                 console.log('\nAdded file:', result[0].path, result[0].hash)
                                                 fileMultihash = result[0].hash
                                                 let ipfsURL = 'https://ipfs.io/ipfs/' + fileMultihash 
+                                                // Allows call from other domains when used as API endpoint
+                                                res.setHeader('Access-Control-Allow-Origin', '*')
                                                 res.writeHead(200, {'Content-Type': 'text/html'});
                                                 res.write('<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>')
                                                 res.write('The only way to read it from now on is to have the ipfs link:')
@@ -74,7 +77,7 @@ ipfsNode.on('ready', (err) => {
                                 )
                         })
                 }
-                else if (req.url == '/filedownload' && req.method == 'POST') {
+                else if (req.url == '/fileDownload' && req.method == 'POST') {
 
                         var form = new formidable.IncomingForm();
 
@@ -83,14 +86,20 @@ ipfsNode.on('ready', (err) => {
                                 let fileMultihash = fields.fileMultihash
                                 ipfsNode.files.cat(fileMultihash,
                                         (err, stream) => {
-                                                if (err) { return cb(err) }
+                                                if (err) { return err }
                                                 var decrypt = crypto.createDecipher('aes-256-cbc', new Buffer(fields.secret))
-                                                stream.pipe(decrypt).pipe(res) 
                                                 stream.on('close', () => {
-                                                res.write('<h1>Downloaded...</h1>',
-                                                        res.end.bind(res)
-                                               );
+                                                        res.write('<h1>Downloaded...</h1>',
+                                                                res.end.bind(res)
+                                                        );
                                                 })
+                                                decrypt.on("error", ()=>{
+                                                        console.log('Wrong password.')
+                                                        res.write('<h1>Wrong passsword.</h1>',
+                                                                res.end.bind(res)
+                                                        );
+                                                })
+                                                stream.pipe(decrypt).pipe(res) 
                                         }
                                 )
                         })
@@ -101,14 +110,14 @@ ipfsNode.on('ready', (err) => {
                         res.writeHead(200, {'Content-Type': 'text/html'});
                         res.write('<h1> Securely store files</h1>');
                         res.write('<p> Encrypts and uploads your file into a permanent peer-to-peer public storage. Locks your file with a secret so no one else can see your info.</p>');
-                        res.write('<form action="fileupload" method="post" enctype="multipart/form-data">');
+                        res.write('<form action="fileUpload" method="post" enctype="multipart/form-data">');
                         res.write('Secret<br> <input type="text" name="secret"><br>');
                         res.write('File<br> <input type="file" name="filetoupload"><br>');
                         res.write('<br><input type="submit">');
                         res.write('</form>');
                         res.write('<h1> Recover files</h1>');
                         res.write('Enter ipfs multihash and secret to retrieve previously stored information.<br>');
-                        res.write('<form action="/filedownload" method="post">');
+                        res.write('<form action="/fileDownload" method="post">');
                         res.write('<br>IPFS file multihash<br> <input type="text" name="fileMultihash"><br>');
                         res.write('Secret<br> <input type="text" name="secret"><br>');
                         res.write('<br><input type="submit" >')

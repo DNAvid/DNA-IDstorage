@@ -12,6 +12,7 @@
     "ipfs": "^0.25.4",
     "leveldown": "^1.7.2",
     "npm": "^5.4.2",
+    "url": "^0.11.0",
     "zlib": "^1.0.5"
   },
   "devDependencies": {},
