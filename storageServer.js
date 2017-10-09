@@ -17,8 +17,6 @@ var https_options = {
 var PORT = 443;
 var HOST = '0.0.0.0';
 
-// Nodejs encryption of buffers
-
 var ipfsNode = new IPFS()
 
 ipfsNode.on('ready', (err) => {
@@ -29,18 +27,19 @@ ipfsNode.on('ready', (err) => {
 
         var server =  https.createServer(https_options, function (req, res) {
                 if (req.url == '/fileUpload' && req.method == 'POST') {
+
                         var form = new formidable.IncomingForm();
 
-                        // form parsing
                         form.parse(req, function (err, fields, files) {
 
-                                console.log('\nFields=\n ',fields)
-                                console.log('\nFiles=\n ',files)
-
-                                //if (typeof(files.filetoupload)==="undefined"){res.end("Error: no file selected.")}
 
                                 var privateKey = new Buffer(fields.secret);
                                 // create read stream to encrypt and send to ipfs
+                                if (typeof(files.filetoupload)==='undefined'){
+                                        console.log('Fields is',fields,'\nFiles is\n',files)
+                                        res.writeHead(400, {'Content-Type': 'text/html'});
+                                        return res.end('Error: no file selected, please select a file to upload.')
+                                }
                                 var rstream = fs
                                         .createReadStream(files.filetoupload.path)
                                         .pipe(crypto.createCipher('aes-256-cbc', privateKey))
@@ -64,34 +63,47 @@ ipfsNode.on('ready', (err) => {
                                                 let ipfsURL = 'https://ipfs.io/ipfs/' + fileMultihash 
                                                 // Allows call from other domains when used as API endpoint
                                                 res.setHeader('Access-Control-Allow-Origin', '*')
-                                                res.writeHead(200, {'Content-Type': 'text/html'});
-                                                res.write('<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>')
-                                                res.write('The only way to read it from now on is to have the ipfs link:')
-                                                res.write('<br><a href="'+ipfsURL+ '">'+ipfsURL+'</a><br>')
-                                                res.write('<br>...and the secret you provided, it is posted here for the last time, then it will be erased forever:<br>'+fields.secret)
-                                                res.write('<br><br>the fileMultihash is (unique ID in ipfs URL above):<br>'+fileMultihash+'<br>')
-                                                res.write('<a href="https://dnacoinstorage.com/">Recover files here, or upload more.</a>'
-                                                        ,res.end.bind(res)
-                                                )
+
+                                                if(typeof(fields.interactive)==='undefined' || parseInt(fields.interactive)){
+                                                        res.writeHead(200, {'Content-Type': 'text/html'});
+                                                        res.write('<h2> Your file is now stored using the interplanetary file system and will be permanently available here:</h2>')
+                                                        res.write('The only way to read it from now on is to have the ipfs link:')
+                                                        res.write('<br><a href="'+ipfsURL+ '">'+ipfsURL+'</a><br>')
+                                                        res.write('<br>...and the secret you provided, it is posted here for the last time, then it will be erased forever:<br>'+fields.secret)
+                                                        res.write('<br><br>the fileMultihash is (unique ID in ipfs URL above):<br>'+fileMultihash+'<br>')
+                                                        res.write('<a href="https://dnacoinstorage.com/">Recover files here, or upload more.</a>'
+                                                                ,res.end.bind(res)
+                                                        )
+                                                }
+                                                else if(!parseInt(fields.interactive)){
+                                                        console.log('non-interactive mode')
+                                                        res.setHeader('Content-Type', 'application/json');
+                                                        res.write(JSON.stringify({ hash: fileMultihash }), res.end.bind(res));
+                                                
+                                                }else{console.log('Error: cannot determine interactive status of session.')}
                                         }
                                 )
                         })
                 }
                 else if (req.url == '/fileDownload' && req.method == 'POST') {
 
+
                         var form = new formidable.IncomingForm();
 
-                        // form parsing
                         form.parse(req, function (err,fields){
                                 let fileMultihash = fields.fileMultihash
                                 ipfsNode.files.cat(fileMultihash,
                                         (err, stream) => {
                                                 if (err) { return err }
                                                 var decrypt = crypto.createDecipher('aes-256-cbc', new Buffer(fields.secret))
+                                                res.writeHead(200, 
+                                                        {
+                                                                "Content-Disposition": 'attachment; filename="DNA.txt"',
+                                                                'Content-Type': 'multipart/form-data; boundary=---------------------------974767299852498929531610575',
+                                                                'Access-Control-Allow-Origin': '*'
+                                                        })
                                                 stream.on('close', () => {
-                                                        res.write('<h1>Downloaded...</h1>',
-                                                                res.end.bind(res)
-                                                        );
+                                                        res.end.bind(res)
                                                 })
                                                 decrypt.on("error", ()=>{
                                                         console.log('Wrong password.')
@@ -107,6 +119,7 @@ ipfsNode.on('ready', (err) => {
 
                 else if (req.url == '/' && req.method == 'GET'){
                         // Upload form
+                        res.setHeader('Access-Control-Allow-Origin', '*')
                         res.writeHead(200, {'Content-Type': 'text/html'});
                         res.write('<h1> Securely store files</h1>');
                         res.write('<p> Encrypts and uploads your file into a permanent peer-to-peer public storage. Locks your file with a secret so no one else can see your info.</p>');
@@ -124,10 +137,9 @@ ipfsNode.on('ready', (err) => {
                         res.write('</form>');
                         res.write('<p>* this service is used by <a href="https://dnavid.com" target="_blank">DNA ID</a> to upload personal DNA information safely, while retaining ownership and control. Contact on Twitter: <a href="https://twitter.com/davidweisss" target="_blank">@davidweisss</a><p>');
                         res.write('<h1>How it works</h1>');
-      res.write('<iframe width="560" height="315" src="https://www.youtube.com/embed/KJKNyoJBD4U?rel=0" frameborder="0" allowfullscreen></iframe>')
+                        res.write('<iframe width="560" height="315" src="https://www.youtube.com/embed/KJKNyoJBD4U?rel=0" frameborder="0" allowfullscreen></iframe>')
                         return res.end();
                 } else{
-
                         res.writeHead(404, {'Content-Type': 'text/html'});
                         return res.end('The page does not exist.')
                 }
@@ -136,7 +148,6 @@ ipfsNode.on('ready', (err) => {
                         console.error(err)
                         process.exit(1)
                 }
-
                 console.log('HTTPS Server listening on %s:%s', HOST, PORT)
         }).listen(PORT, HOST);
 })
